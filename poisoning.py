@@ -247,8 +247,8 @@ class PoisonedCora(Dataset):
     
     def generate_poison_tensor(self, n):
         torch.manual_seed(self.seed)
-        poison_tensor = torch.randint(0, 2, (n,), dtype=torch.float32)
-        # poison_tensor = torch.ones(n, dtype=torch.float32)
+        # poison_tensor = torch.randint(0, 2, (n,), dtype=torch.float32)
+        poison_tensor = torch.ones(n, dtype=torch.float32)
         return poison_tensor
 
 
