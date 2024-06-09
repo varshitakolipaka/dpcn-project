@@ -14,7 +14,6 @@ class GCN(torch.nn.Module):
         x = self.conv2(x, edge_index)
         return F.log_softmax(x, dim=1)
 
-
 def getGNN(dataset):
     model = GCN(num_features=dataset.num_features, num_classes=dataset.num_classes)
     return model

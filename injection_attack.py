@@ -12,6 +12,7 @@ class PoisonedCora():
         print(seed)
         data = dataset[0]
         copied_data = copy.deepcopy(data)
+        self.data = copied_data
         
         print("Initial data:")
         self.print_data_statistics(data)
@@ -22,13 +23,10 @@ class PoisonedCora():
         self.poison_tensor = torch.ones(poison_tensor_size, dtype=torch.float32)
         self.is_test = is_test
         self.test_with_poison = test_with_poison
-        self.data = copied_data
         self.data = self.augment_cora_dataset(data, num_nodes_to_inject, threshold_for_flipping,
                                               avg_degree, self.target_label, include_in_train)
-        
         print("Data after augmentation:")
         self.print_data_statistics(self.data)
-
         if not self.is_test:
             self.poison_indices = self.get_poison_indices(num_nodes_to_inject)
             if num_nodes_to_inject > 0 and self.poison_indices.numel() > 0:
@@ -44,6 +42,7 @@ class PoisonedCora():
             # Cloning nodes
             indices_to_clone = np.random.choice(num_nodes, num_nodes_to_inject, replace=True)
             new_features = data.x[indices_to_clone].clone().detach()
+            poison_mask = torch.zeros(num_nodes + num_nodes_to_inject, dtype=torch.bool)
             print(f"Indices to clone: {indices_to_clone}")
             print(f"New features before flipping: {new_features}")
 
@@ -79,6 +78,9 @@ class PoisonedCora():
                 test_mask[-num_nodes_to_inject:] = True
 
             data.train_mask, data.test_mask, data.val_mask = train_mask, test_mask, val_mask
+            poison_mask[-num_nodes_to_inject:] = True
+            data.poison_mask = poison_mask
+            data.adj = self.compute_adjacency_matrix(data.edge_index, data.x.size(0))
 
         return data
 
@@ -108,6 +110,17 @@ class PoisonedCora():
     def poison_features(self, features):
         features[-self.poison_tensor.size(0):] = self.poison_tensor
         return features
+    
+    def get_poison_mask(self):
+        poison_mask = torch.zeros(self.data.x.size(0), dtype=torch.bool)
+        if not self.is_test:
+            poison_mask[self.poison_indices] = True
+        return poison_mask
+    
+    def compute_adjacency_matrix(self, edge_index, num_nodes):
+        adj = torch.zeros((num_nodes, num_nodes), dtype=torch.float)
+        adj[edge_index[0], edge_index[1]] = 1
+        return adj
 
     def print_data_statistics(self, data):
         print(f"Number of nodes: {data.x.size(0)}")
